@@ -1,21 +1,41 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
+} from "react-native";
+import { useAppDispatch, useAppSelector } from "@/app/store/hooks";
+import { sendOtp, verifyOtp } from "@/app/store/slices/authSlice";
 
 export default function PhoneOtpScreen() {
-  const [otpSent, setOtpSent] = useState(false);
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const dispatch = useAppDispatch();
+  const { loading, otpSent, token, error } = useAppSelector(
+    (state) => state.auth
+  );
+
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState(["", "", "", ""]);
+
+  /* ======================
+     EFFECT: LOGIN SUCCESS
+  ====================== */
+  useEffect(() => {
+    if (token) {
+      router.replace("/register/profile");
+    }
+  }, [token]);
+
+  /* ======================
+     HANDLERS
+  ====================== */
 
   const handleSendOtp = () => {
     if (phone.length === 10) {
-      setOtpSent(true);
+      dispatch(sendOtp(`+91${phone}`));
     }
   };
 
@@ -26,9 +46,20 @@ export default function PhoneOtpScreen() {
   };
 
   const handleVerify = () => {
-    // Demo purpose – assume OTP is correct
-    router.push('/register/profile');
+    const enteredOtp = otp.join("");
+    if (enteredOtp.length === 4) {
+      dispatch(
+        verifyOtp({
+          phone: `+91${phone}`,
+          otp: enteredOtp,
+        })
+      );
+    }
   };
+
+  /* ======================
+     UI
+  ====================== */
 
   return (
     <View style={styles.container}>
@@ -42,7 +73,6 @@ export default function PhoneOtpScreen() {
 
       {!otpSent ? (
         <>
-          {/* Phone Input State */}
           <Text style={styles.heading}>Enter your phone number</Text>
 
           <TextInput
@@ -59,15 +89,18 @@ export default function PhoneOtpScreen() {
               styles.button,
               phone.length !== 10 && styles.disabledButton,
             ]}
-            disabled={phone.length !== 10}
+            disabled={phone.length !== 10 || loading}
             onPress={handleSendOtp}
           >
-            <Text style={styles.buttonText}>Send OTP</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Send OTP</Text>
+            )}
           </TouchableOpacity>
         </>
       ) : (
         <>
-          {/* OTP State */}
           <Text style={styles.heading}>Verify OTP</Text>
 
           <View style={styles.otpRow}>
@@ -85,19 +118,31 @@ export default function PhoneOtpScreen() {
             ))}
           </View>
 
+          {error && (
+            <Text style={{ color: "red", textAlign: "center", marginBottom: 16 }}>
+              {error}
+            </Text>
+          )}
+
           <TouchableOpacity
             style={styles.button}
             onPress={handleVerify}
+            disabled={loading}
           >
-            <Text style={styles.buttonText}>
-              Verify & Continue
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>
+                Verify & Continue
+              </Text>
+            )}
           </TouchableOpacity>
         </>
       )}
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

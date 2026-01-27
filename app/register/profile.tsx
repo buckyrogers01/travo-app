@@ -1,20 +1,36 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+  Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LANGUAGES = ['English', 'Hindi', 'Punjabi', 'Spanish'];
 
 export default function BasicProfileScreen() {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [selectedExpertise, setSelectedExpertise] = useState<string[]>([]);
+  const [experience, setExperience] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const EXPERTISE_LIST = [
+    'Trekking',
+    'Camping',
+    'Cultural',
+    'Local Trails',
+    'Wildlife',
+    'Food Tours',
+  ];
 
   const toggleLanguage = (lang: string) => {
     setSelectedLanguages((prev) =>
@@ -24,39 +40,107 @@ export default function BasicProfileScreen() {
     );
   };
 
-  const handleContinue = () => {
-    router.push('/register/expertise');
+  const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert('Permission required', 'Please allow gallery access');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setPhoto(result.assets[0].uri);
+    }
+  };
+
+  const toggleExpertise = (item: string) => {
+    setSelectedExpertise((prev) =>
+      prev.includes(item)
+        ? prev.filter((e) => e !== item)
+        : [...prev, item]
+    );
+  };
+
+  const handleContinue = async () => {
+    console.log({
+        "name": name,
+        "email": email,
+        "user_id": await AsyncStorage.getItem("userId"),
+        "bio": bio,
+        // "photo": photo,
+        "selectedLanguages": selectedLanguages,
+        "experienceYears": experience,
+        "baseLocation": location,
+        "expertise": selectedExpertise,
+    });
+
+    router.push('/register/documents');
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.back} onPress={() => router.back()}>
-          ← Back
-        </Text>
-        <Text style={styles.step}>Step 1 of 5</Text>
+  <View style={styles.screen}>
+    {/* Header */}
+    <View style={styles.header}>
+      <Text style={styles.back} onPress={() => router.back()}>
+        ← Back
+      </Text>
+      <Text style={styles.step}>Step 1 of 5</Text>
+    </View>
+
+    {/* Card */}
+    <View style={styles.card}>
+      {/* Avatar + Title */}
+      <View style={styles.profileRow}>
+        <TouchableOpacity style={styles.avatar} onPress={pickImage}>
+          {photo ? (
+            <Image source={{ uri: photo }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>Add Photo</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.titleBlock}>
+          <Text style={styles.heading}>About You</Text>
+          <Text style={styles.subHeading}>
+            Help travellers know you better
+          </Text>
+        </View>
       </View>
 
-      <Text style={styles.heading}>About You</Text>
-
-      {/* Profile Photo */}
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>Upload Photo</Text>
-      </View>
-
-      {/* Full Name */}
+      {/* Inputs */}
       <TextInput
         style={styles.input}
-        placeholder="Full Name"
+        placeholder="Full name"
         value={name}
         onChangeText={setName}
       />
 
-      {/* Bio */}
+      <TextInput
+        style={styles.input}
+        placeholder="Email address"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Years of experience"
+        value={experience}
+        onChangeText={setExperience}
+        keyboardType="numeric"
+      />
+
       <TextInput
         style={[styles.input, styles.bio]}
-        placeholder="Short bio (max 200 chars)"
+        placeholder="Tell travellers about yourself (max 200 chars)"
         multiline
         maxLength={200}
         value={bio}
@@ -65,7 +149,7 @@ export default function BasicProfileScreen() {
       <Text style={styles.counter}>{bio.length}/200</Text>
 
       {/* Languages */}
-      <Text style={styles.label}>Languages</Text>
+      <Text style={styles.label}>Languages you speak</Text>
       <View style={styles.chipsRow}>
         {LANGUAGES.map((lang) => (
           <TouchableOpacity
@@ -88,38 +172,68 @@ export default function BasicProfileScreen() {
         ))}
       </View>
 
-      {/* Location */}
       <TextInput
         style={styles.input}
-        placeholder="Base Location"
+        placeholder="Base location"
         value={location}
         onChangeText={setLocation}
       />
 
-      {/* Continue */}
+      {/* Expertise */}
+      <Text style={styles.label}>Your expertise</Text>
+      <View style={styles.chipsRow}>
+        {EXPERTISE_LIST.map((item) => (
+          <TouchableOpacity
+            key={item}
+            style={[
+              styles.chip,
+              selectedExpertise.includes(item) && styles.chipSelected,
+            ]}
+            onPress={() => toggleExpertise(item)}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                selectedExpertise.includes(item) && styles.chipTextSelected,
+              ]}
+            >
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+
+    {/* Sticky Footer */}
+    <View style={styles.footer}>
       <TouchableOpacity style={styles.button} onPress={handleContinue}>
         <Text style={styles.buttonText}>Continue</Text>
       </TouchableOpacity>
     </View>
-  );
+  </View>
+);
+
 }
 
+
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: '#E8F5E9',
-    padding: 24,
+    backgroundColor: '#F3FBF6',
+    paddingHorizontal: 20,
+    overflow: 'scroll',
   },
 
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginVertical: 16,
   },
 
   back: {
     fontSize: 16,
     color: '#2E7D32',
+    fontWeight: '500',
   },
 
   step: {
@@ -128,42 +242,77 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  heading: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1B5E20',
-    marginBottom: 20,
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 20,
+    paddingBottom: 30,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
   },
 
   avatar: {
-    height: 100,
-    width: 100,
-    borderRadius: 50,
-    backgroundColor: '#C8E6C9',
+    height: 88,
+    width: 88,
+    borderRadius: 44,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#81C784',
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: 24,
+    backgroundColor: '#EAF7EF',
+  },
+
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
   },
 
   avatarText: {
     fontSize: 12,
     color: '#2E7D32',
-    textAlign: 'center',
+    fontWeight: '500',
+  },
+
+  titleBlock: {
+    marginLeft: 16,
+    flex: 1,
+  },
+
+  heading: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1B5E20',
+  },
+
+  subHeading: {
+    fontSize: 14,
+    color: '#558B2F',
+    marginTop: 4,
   },
 
   input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
+    height: 52,
+    borderRadius: 14,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#A5D6A7',
-    marginBottom: 12,
+    borderColor: '#D7EBDD',
+    backgroundColor: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 14,
   },
 
   bio: {
-    height: 90,
+    height: 100,
     textAlignVertical: 'top',
   },
 
@@ -171,40 +320,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#558B2F',
     textAlign: 'right',
-    marginBottom: 16,
+    marginBottom: 18,
   },
 
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1B5E20',
-    marginBottom: 8,
+    marginBottom: 10,
   },
 
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 20,
+    marginBottom: 22,
   },
 
   chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: '#81C784',
     marginRight: 10,
     marginBottom: 10,
+    backgroundColor: '#FFFFFF',
   },
 
   chipSelected: {
     backgroundColor: '#2E7D32',
     borderColor: '#2E7D32',
+    transform: [{ scale: 1.03 }],
   },
 
   chipText: {
     color: '#2E7D32',
     fontSize: 14,
+    fontWeight: '500',
   },
 
   chipTextSelected: {
@@ -212,11 +364,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  footer: {
+    paddingVertical: 16,
+  },
+
   button: {
     backgroundColor: '#2E7D32',
     paddingVertical: 16,
-    borderRadius: 14,
-    marginTop: 12,
+    borderRadius: 18,
   },
 
   buttonText: {
@@ -226,3 +381,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
