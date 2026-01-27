@@ -25,7 +25,7 @@ export default function VerificationDocumentsScreen() {
         <Text style={styles.back} onPress={() => router.back()}>
           ← Back
         </Text>
-        <Text style={styles.step}>Step 3 of 5</Text>
+        <Text style={styles.step}>Step 2 of 4</Text>
       </View>
 
       <Text style={styles.heading}>Verify Your Identity</Text>

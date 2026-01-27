@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { submitGuideProfileApi } from "@/app/api/guideApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const submitGuideProfile = createAsyncThunk(
   "guide/submitProfile",
@@ -9,6 +10,7 @@ export const submitGuideProfile = createAsyncThunk(
   ) => {
     try {
       const res = await submitGuideProfileApi(guideId, data);
+      AsyncStorage.setItem("guideId", res.data.id)
       return res.data;
     } catch (err: any) {
       return rejectWithValue(
