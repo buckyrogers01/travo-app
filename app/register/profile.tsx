@@ -11,10 +11,17 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store';
+import { submitGuideProfile } from '../store/slices/guideSlice';
 
 const LANGUAGES = ['English', 'Hindi', 'Punjabi', 'Spanish'];
 
 export default function BasicProfileScreen() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading, error } = useSelector(
+    (state: RootState) => state.guide
+  );
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [selectedExpertise, setSelectedExpertise] = useState<string[]>([]);
@@ -69,20 +76,38 @@ export default function BasicProfileScreen() {
   };
 
   const handleContinue = async () => {
-    console.log({
-        "name": name,
-        "email": email,
-        "user_id": await AsyncStorage.getItem("userId"),
-        "bio": bio,
-        // "photo": photo,
-        "selectedLanguages": selectedLanguages,
-        "experienceYears": experience,
-        "baseLocation": location,
-        "expertise": selectedExpertise,
-    });
+    const userId = await AsyncStorage.getItem("userId");
 
-    router.push('/register/documents');
+    if (!userId) {
+      Alert.alert("Error", "User not found. Please login again.");
+      return;
+    }
+
+    const payload = {
+      name,
+      email,
+      bio,
+      selectedLanguages,
+      experienceYears: parseInt(experience),
+      baseLocation: location,
+      expertise: selectedExpertise,
+    };
+
+    dispatch(
+      submitGuideProfile({
+        guideId: Number(userId),
+        data: payload,
+      })
+    )
+      .unwrap()
+      .then(() => {
+        router.push("/register/documents"); // Step 2
+      })
+      .catch((err) => {
+        Alert.alert("Error", err || "Profile submission failed");
+      });
   };
+
 
   return (
   <View style={styles.screen}>
@@ -204,10 +229,22 @@ export default function BasicProfileScreen() {
       </View>
     </View>
 
+    {error && (
+      <Text style={{ color: "red", marginTop: 8 }}>
+        {error}
+      </Text>
+    )}
+
     {/* Sticky Footer */}
     <View style={styles.footer}>
-      <TouchableOpacity style={styles.button} onPress={handleContinue}>
-        <Text style={styles.buttonText}>Continue</Text>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleContinue}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? "Saving..." : "Continue"}
+        </Text>
       </TouchableOpacity>
     </View>
   </View>
