@@ -8,6 +8,7 @@ import {
   View,
   Image,
   Alert,
+  ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -112,7 +113,8 @@ export default function BasicProfileScreen() {
   return (
   <View style={styles.screen}>
     {/* Header */}
-    <View style={styles.header}>
+    <ScrollView>
+        <View style={styles.header}>
       <Text style={styles.back} onPress={() => router.back()}>
         ← Back
       </Text>
@@ -123,13 +125,6 @@ export default function BasicProfileScreen() {
     <View style={styles.card}>
       {/* Avatar + Title */}
       <View style={styles.profileRow}>
-        <TouchableOpacity style={styles.avatar} onPress={pickImage}>
-          {photo ? (
-            <Image source={{ uri: photo }} style={styles.avatarImage} />
-          ) : (
-            <Text style={styles.avatarText}>Add Photo</Text>
-          )}
-        </TouchableOpacity>
 
         <View style={styles.titleBlock}>
           <Text style={styles.heading}>About You</Text>
@@ -247,6 +242,7 @@ export default function BasicProfileScreen() {
         </Text>
       </TouchableOpacity>
     </View>
+    </ScrollView>
   </View>
 );
 

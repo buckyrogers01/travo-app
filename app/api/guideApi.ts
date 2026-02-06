@@ -22,3 +22,8 @@ export const submitGuideProfileApi = (
 ) => {
   return api.post(`/guides/${userId}`, payload);
 };
+
+export const uploadGuideDocumentsApi = (formData: FormData) => {
+  return api.post("/guides/documents/upload", formData, {
+  });
+};

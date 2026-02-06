@@ -1,22 +1,129 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router } from "expo-router";
+import { useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
-} from 'react-native';
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+  Alert,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { ImagePickerAsset } from "expo-image-picker";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/app/store";
+import { uploadGuideDocuments } from "../store/slices/guideSlice";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+import api from "../api/axios";
 
-const ID_TYPES = ['Aadhaar', 'Passport', 'Driving License'];
+const ID_TYPES = ["Aadhaar", "Passport", "Driving License"];
 
 export default function VerificationDocumentsScreen() {
-  const [idType, setIdType] = useState('Aadhaar');
-  const [emergencyPhone, setEmergencyPhone] = useState('');
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading, error } = useSelector((state: RootState) => state.guide);
 
-  const handleSubmit = () => {
-    router.push('/register/payout');
+  const [idType, setIdType] = useState("Aadhaar");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
+
+  // ✅ IMPORTANT: store ImagePickerAsset (NOT string)
+  const [idFront, setIdFront] = useState<ImagePickerAsset | null>(null);
+  const [idBack, setIdBack] = useState<ImagePickerAsset | null>(null);
+  const [certificate, setCertificate] = useState<ImagePickerAsset | null>(null);
+
+  // ✅ Correct image picker
+  const pickImage = async (
+    setter: (asset: ImagePickerAsset) => void
+  ) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+      base64: false,          // important
+    });
+
+    if (!result.canceled) {
+      setter(result.assets[0]);
+    }
   };
+
+const assetToFormDataFile = async (asset: ImagePickerAsset) => {
+  // 🌐 EXPO WEB (VERY IMPORTANT)
+  if (Platform.OS === "web") {
+    const response = await fetch(asset.uri);
+    const blob = await response.blob();
+
+    return new File(
+      [blob],
+      asset.fileName || `file_${Date.now()}.jpg`,
+      { type: asset.mimeType || blob.type || "image/jpeg" }
+    );
+  }
+
+  // 📱 ANDROID / IOS
+  return {
+    uri: asset.uri,
+    name: asset.fileName || `file_${Date.now()}.jpg`,
+    type: asset.mimeType || "image/jpeg",
+  } as any;
+};
+
+
+  // ✅ FINAL handleSubmit (MATCHES CURL)
+const handleSubmit = async () => {
+  if (!idFront || !idBack) {
+    Alert.alert("Error", "Please upload both ID images");
+    return;
+  }
+
+  const guideId = await AsyncStorage.getItem("guideId");
+  if (!guideId) {
+    Alert.alert("Error", "Guide ID not found");
+    return;
+  }
+
+  const formData = new FormData();
+
+  formData.append("idType", idType);
+  formData.append("emergencyPhone", emergencyPhone);
+  formData.append("guideId", guideId);
+
+  formData.append("idFront", {
+    uri: idFront.uri,
+    name: "idFront.jpg",
+    type: "image/jpeg",
+  } as any);
+
+  formData.append("idBack", {
+    uri: idBack.uri,
+    name: "idBack.jpg",
+    type: "image/jpeg",
+  } as any);
+
+  if (certificate) {
+    formData.append("certificate", {
+      uri: certificate.uri,
+      name: "certificate.jpg",
+      type: "image/jpeg",
+    } as any);
+  }
+
+  await api.post("/guides/documents/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  router.push("/register/payout");
+};
+
+
+
+
+  if (error) {
+    Alert.alert("Error", error);
+  }
 
   return (
     <View style={styles.container}>
@@ -57,19 +164,41 @@ export default function VerificationDocumentsScreen() {
       {/* Upload ID */}
       <Text style={styles.label}>Upload ID</Text>
       <View style={styles.uploadRow}>
-        <View style={styles.uploadBox}>
-          <Text style={styles.uploadText}>Upload ID Front</Text>
-        </View>
-        <View style={styles.uploadBox}>
-          <Text style={styles.uploadText}>Upload ID Back</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.uploadBox}
+          onPress={() => pickImage(setIdFront)}
+        >
+          {idFront ? (
+            <Image source={{ uri: idFront.uri }} style={styles.image} />
+          ) : (
+            <Text style={styles.uploadText}>Upload ID Front</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.uploadBox, { marginRight: 0 }]}
+          onPress={() => pickImage(setIdBack)}
+        >
+          {idBack ? (
+            <Image source={{ uri: idBack.uri }} style={styles.image} />
+          ) : (
+            <Text style={styles.uploadText}>Upload ID Back</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Certificates */}
+      {/* Certificate */}
       <Text style={styles.label}>Certificates (Optional)</Text>
-      <View style={styles.uploadBox}>
-        <Text style={styles.uploadText}>Upload Certificate</Text>
-      </View>
+      <TouchableOpacity
+        style={styles.uploadBox}
+        onPress={() => pickImage(setCertificate)}
+      >
+        {certificate ? (
+          <Image source={{ uri: certificate.uri }} style={styles.image} />
+        ) : (
+          <Text style={styles.uploadText}>Upload Certificate</Text>
+        )}
+      </TouchableOpacity>
 
       {/* Emergency Contact */}
       <Text style={styles.label}>Emergency Contact</Text>
@@ -89,12 +218,19 @@ export default function VerificationDocumentsScreen() {
       </View>
 
       {/* Submit */}
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Submit for Verification</Text>
+      <TouchableOpacity
+        style={[styles.button, loading && { opacity: 0.6 }]}
+        onPress={handleSubmit}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? "Uploading..." : "Submit for Verification"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -166,13 +302,12 @@ const styles = StyleSheet.create({
 
   uploadRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 20,
   },
 
   uploadBox: {
     flex: 1,
-    height: 80,
+    height: 90,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#A5D6A7',
@@ -180,12 +315,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
+    overflow: 'hidden',
   },
 
   uploadText: {
     fontSize: 13,
     color: '#558B2F',
     textAlign: 'center',
+  },
+
+  image: {
+    width: '100%',
+    height: '100%',
   },
 
   input: {
