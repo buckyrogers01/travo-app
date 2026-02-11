@@ -115,7 +115,7 @@ const handleSubmit = async () => {
     },
   });
 
-  router.push("/register/payout");
+  router.push("/register/pending");
 };
 
 
@@ -132,7 +132,7 @@ const handleSubmit = async () => {
         <Text style={styles.back} onPress={() => router.back()}>
           ← Back
         </Text>
-        <Text style={styles.step}>Step 2 of 4</Text>
+        <Text style={styles.step}>Step 2 of 2</Text>
       </View>
 
       <Text style={styles.heading}>Verify Your Identity</Text>

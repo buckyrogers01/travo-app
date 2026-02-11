@@ -13,6 +13,7 @@ export const sendOtp = createAsyncThunk<
   async (phone, { rejectWithValue }) => {
     try {
       await sendOtpApi(phone);
+      console.log(phone);
       return phone;
     } catch {
       return rejectWithValue("Failed to send OTP");

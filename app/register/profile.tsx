@@ -118,7 +118,7 @@ export default function BasicProfileScreen() {
       <Text style={styles.back} onPress={() => router.back()}>
         ← Back
       </Text>
-      <Text style={styles.step}>Step 1 of 5</Text>
+      <Text style={styles.step}>Step 1 of 2</Text>
     </View>
 
     {/* Card */}

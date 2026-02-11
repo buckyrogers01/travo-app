@@ -13,7 +13,6 @@ export default function RegisterLayout() {
       <Stack.Screen name="profile" />
       <Stack.Screen name="expertise" />
       <Stack.Screen name="documents" />
-      <Stack.Screen name="payout" />
       <Stack.Screen name="pending" />
       <Stack.Screen name="approved" />
       <Stack.Screen name="blueprint" />
