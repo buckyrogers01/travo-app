@@ -46,25 +46,24 @@ export default function VerificationDocumentsScreen() {
     if (!result.canceled) {
       setter(result.assets[0]);
     }
+    console.log(result.assets);
   };
 
 const assetToFormDataFile = async (asset: ImagePickerAsset) => {
-  // 🌐 EXPO WEB (VERY IMPORTANT)
   if (Platform.OS === "web") {
     const response = await fetch(asset.uri);
     const blob = await response.blob();
-
-    return new File(
-      [blob],
-      asset.fileName || `file_${Date.now()}.jpg`,
-      { type: asset.mimeType || blob.type || "image/jpeg" }
-    );
+    
+    // Web ke liye File object return karein
+    return new File([blob], asset.fileName || "upload.jpg", {
+      type: asset.mimeType || "image/jpeg",
+    });
   }
 
-  // 📱 ANDROID / IOS
+  // Mobile ke liye wahi purana logic
   return {
     uri: asset.uri,
-    name: asset.fileName || `file_${Date.now()}.jpg`,
+    name: asset.fileName || "upload.jpg",
     type: asset.mimeType || "image/jpeg",
   } as any;
 };
@@ -83,39 +82,36 @@ const handleSubmit = async () => {
     return;
   }
 
-  const formData = new FormData();
+  try {
+    const formData = new FormData();
+    formData.append("idType", idType);
+    formData.append("emergencyPhone", emergencyPhone);
+    formData.append("guideId", guideId);
 
-  formData.append("idType", idType);
-  formData.append("emergencyPhone", emergencyPhone);
-  formData.append("guideId", guideId);
+    // 🚀 Yahan hai asli magic: assetToFormDataFile ka use karo
+    const idFrontFile = await assetToFormDataFile(idFront);
+    const idBackFile = await assetToFormDataFile(idBack);
 
-  formData.append("idFront", {
-    uri: idFront.uri,
-    name: "idFront.jpg",
-    type: "image/jpeg",
-  } as any);
+    formData.append("idFront", idFrontFile);
+    formData.append("idBack", idBackFile);
 
-  formData.append("idBack", {
-    uri: idBack.uri,
-    name: "idBack.jpg",
-    type: "image/jpeg",
-  } as any);
+    if (certificate) {
+      const certFile = await assetToFormDataFile(certificate);
+      formData.append("certificate", certFile);
+    }
 
-  if (certificate) {
-    formData.append("certificate", {
-      uri: certificate.uri,
-      name: "certificate.jpg",
-      type: "image/jpeg",
-    } as any);
+    // Axios call
+    await api.post("/guides/documents/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    router.push("/register/pending");
+  } catch (err) {
+    console.error("Upload Error:", err);
+    Alert.alert("Error", "Something went wrong during upload");
   }
-
-  await api.post("/guides/documents/upload", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-
-  router.push("/register/pending");
 };
 
 

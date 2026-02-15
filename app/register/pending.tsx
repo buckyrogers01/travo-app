@@ -6,7 +6,7 @@ export default function VerificationPendingScreen() {
   useEffect(() => {
     // Guide app simulation: auto-approve after few seconds
     const timer = setTimeout(() => {
-      router.replace('/register/approved');
+      router.replace('/login');
     }, 3000);
 
     return () => clearTimeout(timer);
